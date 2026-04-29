@@ -1,1 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pirdan Anti-Call Dashboard 🚫</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #00ff41; /* Warna Hacker Matrix */
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column; /* Biar bisa tumpuk dashboard */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
 
+        .dashboard {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px #00ff4133;
+            border: 1px solid #00ff41;
+            width: 350px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; margin-bottom: 20px; }
+
+        .status-card {
+            background: #262626;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* Tombol Switch ala Pro */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #444;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px; width: 26px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: #00ff41; }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        .mode-label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        #log {
+            font-size: 0.7rem;
+            color: #888;
+            height: 60px;
+            overflow-y: auto;
+            text-align: left;
+            background: #000;
+            padding: 5px;
+            margin-top: 15px;
+            border-radius: 5px;
+        }
+
+        /* --- STYLE TAMBAHAN PRO --- */
+        .pro-features {
+            margin-top: 20px;
+            border-top: 1px solid #333;
+            padding-top: 15px;
+            text-align: left;
+        }
+        .input-group { margin-bottom: 10px; }
+        .input-group label { font-size: 0.7rem; display: block; color: #888; margin-bottom: 5px; }
+        input[type="text"] {
+            background: #000;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            width: 93%;
+            padding: 5px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 0.8rem;
+            outline: none;
+        }
+        .pulse {
+            width: 10px; height: 10px;
+            background: #00ff41; border-radius: 50%;
+            display: inline-block; margin-right: 5px;
+            box-shadow: 0 0 10px #00ff41;
+            animation: pulse-animation 1.5s infinite;
+            display: none;
+        }
+        @keyframes pulse-animation {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 65, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 255, 65, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 65, 0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h1>PIRDAN HUB SHIELD</h1>
+    
+    <div class="status-card">
+        <label class="switch">
+            <input type="checkbox" id="dndSwitch" onchange="toggleDND()">
+            <span class="slider"></span>
+        </label>
+        <span class="mode-label" id="statusText">SYSTEM: INACTIVE</span>
+    </div>
+
+    <div style="font-size: 0.8rem;">
+        <p>🛡️ <b>Anti-Call:</b> <span id="rejectStatus">OFF</span></p>
+        <p>💬 <b>Auto-Reply:</b> <span id="replyStatus">OFF</span></p>
+    </div>
+
+    <div id="log">Sistem siap... menunggu instruksi.</div>
+    
+    <p style="font-size: 0.6rem; margin-top: 20px; color: #555;">SECURITY BY PIRDAN-LABS v1.0</p>
+</div>
+
+<div class="dashboard" id="proSettings" style="display: block;">
+    <div class="pro-features">
+        <p style="font-size: 0.8rem; font-weight: bold;"><span id="pulseIcon" class="pulse"></span> AUTO-REPLY SETTINGS</p>
+        <div class="input-group">
+            <label>Pesan Penolakan Otomatis:</label>
+            <input type="text" id="autoReplyMsg" value="Maaf, Idan lagi sibuk koding. Jangan telpon!" onchange="updateMsg()">
+        </div>
+        
+        <p style="font-size: 0.7rem; color: #888; margin-top: 15px;">TARGET LAST SEEN:</p>
+        <div id="targetLog" style="font-family: 'Orbitron'; font-size: 0.8rem; color: #ff4141;">-- NO THREAT DETECTED --</div>
+    </div>
+</div>
+
+<script>
+    // URL Database lu biar sinkron sama Bot
+    const dbURL = "https://pirdangame-default-rtdb.asia-southeast1.firebasedatabase.app/SystemControl.json";
+
+    // FUNGSI ASLI LU (TIDAK DIUBAH)
+    function toggleDND() {
+        const isChecked = document.getElementById("dndSwitch").checked;
+        const statusText = document.getElementById("statusText");
+        const log = document.getElementById("log");
+
+        // Update Tampilan
+        if (isChecked) {
+            statusText.innerText = "SYSTEM: PROTECTED";
+            statusText.style.color = "#00ff41";
+            document.getElementById("rejectStatus").innerText = "ON";
+            document.getElementById("replyStatus").innerText = "ON";
+            log.innerHTML += ">> DND Mode Activated<br>";
+        } else {
+            statusText.innerText = "SYSTEM: INACTIVE";
+            statusText.style.color = "#ff4141";
+            document.getElementById("rejectStatus").innerText = "OFF";
+            document.getElementById("replyStatus").innerText = "OFF";
+            log.innerHTML += ">> DND Mode Deactivated<br>";
+        }
+
+        // Kirim status ke Firebase biar Bot WA lu tau harus nolak telpon atau enggak
+        fetch(dbURL, {
+            method: 'PUT',
+            body: JSON.stringify({
+                antiCall: isChecked,
+                lastUpdated: new Date().toLocaleTimeString()
+            })
+        })
+        .then(() => {
+            console.log("Status tersinkron ke Cloud!");
+            updateProVisual(isChecked); // Panggil visual tambahan
+        })
+        .catch(err => console.error("Gagal sinkron:", err));
+    }
+
+    // FUNGSI TAMBAHAN BIAR MAKIN PRO
+    function updateMsg() {
+        const msg = document.getElementById("autoReplyMsg").value;
+        fetch("https://pirdangame-default-rtdb.asia-southeast1.firebasedatabase.app/SystemSettings.json", {
+            method: 'PUT',
+            body: JSON.stringify({ customMessage: msg })
+        })
+        .then(() => {
+            document.getElementById("log").innerHTML += ">> Auto-Reply updated<br>";
+        });
+    }
+
+    function updateProVisual(active) {
+        const pulse = document.getElementById("pulseIcon");
+        const targetLog = document.getElementById("targetLog");
+
+        if (active) {
+            pulse.style.display = "inline-block";
+            targetLog.innerText = "WAITING FOR INCOMING CALLS...";
+            targetLog.style.color = "#00ff41";
+        } else {
+            pulse.style.display = "none";
+            targetLog.innerText = "-- NO THREAT DETECTED --";
+            targetLog.style.color = "#ff4141";
+        }
+    }
+</script>
+
+</body>
+  </html>
+          
